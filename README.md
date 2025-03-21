@@ -1,0 +1,21 @@
+
+
+Sources
+---
+
+Since this is my first time using _Golang_ (completely my own choice),
+I used various sources to help me with the creation of this application.
+
+Golang documentation - [click here (go.dev)](https://go.dev/doc/)
+
+Golang book - [click here (golang-book.com)](https://www.golang-book.com/public/pdf/gobook.pdf)
+
+How to make sockets with Go - [click here (dev.to)](https://dev.to/alicewilliamstech/getting-started-with-sockets-in-golang-2j66)
+
+Structs in Go - [click here (gobyexample.com)](https://gobyexample.com/structs)
+
+TCP client - [click here (golinuxcloud.com)](https://www.golinuxcloud.com/golang-tcp-server-client/)
+
+Socket client - [click here (golangr.com)](https://golangr.com/socket-client)
+
+Getting string to uppercase - [click here (geeksforgeeks.com)](https://www.geeksforgeeks.org/how-to-convert-a-string-in-uppercase-in-golang/)
