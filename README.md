@@ -19,3 +19,5 @@ TCP client - [click here (golinuxcloud.com)](https://www.golinuxcloud.com/golang
 Socket client - [click here (golangr.com)](https://golangr.com/socket-client)
 
 Getting string to uppercase - [click here (geeksforgeeks.com)](https://www.geeksforgeeks.org/how-to-convert-a-string-in-uppercase-in-golang/)
+
+Making an empty array in Golang - [click here (stackoverflow.com)](https://stackoverflow.com/questions/45317074/best-practices-constructing-an-empty-array)

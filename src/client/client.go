@@ -40,6 +40,16 @@ func initializeClient() ClientInfo {
 	return clientInfo
 }
 
+func sendClientDataToServer(connection net.Conn, clientInfo ClientInfo) {
+	clientInput := ClientInput{
+		clientInfo: clientInfo,
+		inputType:  "initial",
+		message:    "Connected to the server\n",
+		isPrivate:  false,
+	}
+	fmt.Fprint(connection, clientInput)
+}
+
 func initiateConnection() net.Conn {
 	connection, error := net.Dial(SERVER_TYPE, SERVER_ADDRESS)
 
@@ -48,6 +58,7 @@ func initiateConnection() net.Conn {
 		fmt.Println("Error when trying to dial the server!")
 		os.Exit(1)
 	}
+
 	return connection
 }
 
@@ -105,7 +116,12 @@ func main() {
 
 	// Initiating connection
 	connection := initiateConnection()
+
 	defer connection.Close()
+
+	// Sending client data to server
+	sendClientDataToServer(connection, clientInfo)
+	handleServerResponse(connection)
 
 	for {
 		var userInput int
