@@ -2,21 +2,32 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 )
 
 type ClientInfo struct {
-	nickname string
-	channel  string
+	Nickname string
+	Channel  string
 }
 
+/**
+ * This type represents each input sent to the server
+ *
+ * Content
+ * =======
+ * clientInfo - Information about the client
+ * inputType  - What kind of input. Determines how server responds. Examples: msg, connection init data
+ * message    - The content of the message (mostly relevant in chat)
+ * isPrivate  - Private or public message (mostly relevant in chat)
+ */
 type ClientInput struct {
-	clientInfo ClientInfo
-	inputType  string
-	message    string
-	isPrivate  bool
+	ClientInfo ClientInfo
+	InputType  string
+	Message    string
+	IsPrivate  bool
 }
 
 const (
@@ -34,20 +45,20 @@ func initializeClient() ClientInfo {
 	fmt.Scanf("%s", &nickname)
 
 	clientInfo := ClientInfo{
-		nickname: nickname,
-		channel:  "",
+		Nickname: nickname,
+		Channel:  "",
 	}
 	return clientInfo
 }
 
 func sendClientDataToServer(connection net.Conn, clientInfo ClientInfo) {
 	clientInput := ClientInput{
-		clientInfo: clientInfo,
-		inputType:  "initial",
-		message:    "Connected to the server\n",
-		isPrivate:  false,
+		ClientInfo: clientInfo,
+		InputType:  "initial",
+		Message:    "Connected to the server\n",
+		IsPrivate:  false,
 	}
-	fmt.Fprint(connection, clientInput)
+	sendMessageToServer(connection, clientInput)
 }
 
 func initiateConnection() net.Conn {
@@ -77,10 +88,8 @@ func sendMessage(connection net.Conn, clientInfo ClientInfo) {
 		switch userChoice {
 		case "y":
 			isPrivate = true
-			break
 		case "n":
 			isPrivate = false
-			break
 		default:
 			fmt.Println("Invalid input received. Try again!")
 			continue
@@ -89,13 +98,24 @@ func sendMessage(connection net.Conn, clientInfo ClientInfo) {
 	}
 
 	clientInput := ClientInput{
-		clientInfo: clientInfo,
-		message:    clientMessage + "\n",
-		inputType:  "message",
-		isPrivate:  isPrivate,
+		ClientInfo: clientInfo,
+		Message:    clientMessage + "\n",
+		InputType:  "message",
+		IsPrivate:  isPrivate,
 	}
 
-	fmt.Fprint(connection, clientInput)
+	// Converting input to JSON
+	sendMessageToServer(connection, clientInput)
+}
+
+func sendMessageToServer(connection net.Conn, clientInput ClientInput) {
+	jsonInput, error := json.Marshal(clientInput)
+	if error != nil {
+		fmt.Println(error)
+		return
+	}
+	// Sending the input to the server
+	fmt.Fprint(connection, string(jsonInput)+"\n")
 }
 
 /**
@@ -103,25 +123,28 @@ func sendMessage(connection net.Conn, clientInfo ClientInfo) {
  * Only takes the active connection as a parameter.
  */
 func handleServerResponse(connection net.Conn) {
-	response, error := bufio.NewReader(connection).ReadString('\n')
-	if error != nil {
-		fmt.Println(error)
+	for {
+		response, error := bufio.NewReader(connection).ReadString('\n')
+		if error != nil {
+			fmt.Println(error)
+		}
+		fmt.Println(string(response))
 	}
-	fmt.Println(string(response))
 }
 
 func main() {
 	clientInfo := initializeClient()
-	fmt.Println("Welcome, " + clientInfo.nickname + "!")
+	fmt.Println("Welcome", clientInfo.Nickname+"!")
 
 	// Initiating connection
 	connection := initiateConnection()
-
 	defer connection.Close()
+
+	// A thread for receiving server responses
+	go handleServerResponse(connection)
 
 	// Sending client data to server
 	sendClientDataToServer(connection, clientInfo)
-	handleServerResponse(connection)
 
 	for {
 		var userInput int
@@ -137,7 +160,6 @@ func main() {
 		switch userInput {
 		case 1:
 			sendMessage(connection, clientInfo)
-			handleServerResponse(connection)
 
 		case 2:
 			fmt.Println("Select channel")
