@@ -14,22 +14,23 @@ const (
 	SERVER_HOST    = "127.0.0.1"
 )
 
-type ClientInfo struct {
-	Nickname string
-	Channel  string
+// Client input structs
+type ClientInput struct {
+	Nickname  string
+	InputType string
+	Message   string
+	IsPrivate bool
 }
 
-type ClientInput struct {
-	ClientInfo ClientInfo
-	InputType  string
-	Message    string
-	IsPrivate  bool
+// Chat instance structs
+type Client struct {
+	Nickname   string
+	Connection net.Conn
 }
 
 type Channel struct {
-	ChannelId   int
-	Clients     []ClientInfo
-	Connections []net.Conn
+	ChannelId int
+	Clients   []Client
 }
 
 type ChatInstance struct {
@@ -63,6 +64,7 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 			continue
 		}
 
+		fmt.Println(clientInput.InputType)
 		/**
 		 * Cases
 		 * =====
@@ -71,25 +73,47 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 		 */
 		switch clientInput.InputType {
 		case "initialize":
-			chatInstance.Channels[0].Clients = append(chatInstance.Channels[0].Clients, clientInput.ClientInfo)
+			client := Client{
+				Nickname:   clientInput.Nickname,
+				Connection: connection,
+			}
+			chatInstance.Channels[0].Clients = append(chatInstance.Channels[0].Clients, client)
 			fmt.Fprintln(connection, "You have been added to channel ", chatInstance.Channels[0].ChannelId, ".")
 
 		case "message":
-
 			// Sending a public message to everyone in the channel
 			if !clientInput.IsPrivate {
-				for _, i := range chatInstance.Channels[0].Connections {
-					fmt.Fprintln(i, string(clientInput.ClientInfo.Nickname+": "+clientInput.Message)+"\n")
+				for _, i := range chatInstance.Channels[0].Clients {
+					fmt.Fprintln(i.Connection, string(clientInput.Nickname+": "+clientInput.Message)+"\n")
 				}
 				continue
 			}
 
 			// A private message to a specified individual
-			for _, i := range chatInstance.Channels[0].Connections {
-				fmt.Fprintln(i, string(clientInput.ClientInfo.Nickname+": "+clientInput.Message)+"\n")
+			for _, i := range chatInstance.Channels[0].Clients {
+				fmt.Fprintln(i.Connection, string(clientInput.Nickname+": "+clientInput.Message)+"\n")
 			}
-		}
 
+		case "client-list":
+			for _, channel := range chatInstance.Channels {
+				for _, client := range channel.Clients {
+					if client.Nickname != clientInput.Nickname {
+						continue
+					}
+
+					fmt.Fprintln(connection, "Here are the clients you can send a private message to:")
+					for _, selectClient := range channel.Clients {
+						if selectClient.Nickname == clientInput.Nickname {
+							continue
+						}
+						fmt.Fprintln(connection, selectClient.Nickname)
+					}
+				}
+			}
+
+		default:
+			fmt.Fprintln(connection, "Request rejected due to unknown type. Try again.")
+		}
 	}
 }
 
@@ -99,7 +123,7 @@ func main() {
 	// only one channel, but more will be created to serve the client needs.
 	channel := Channel{
 		ChannelId: channelIdCounter,
-		Clients:   make([]ClientInfo, 0),
+		Clients:   make([]Client, 0),
 	}
 	chat := ChatInstance{
 		Channels: []Channel{channel},
@@ -120,7 +144,6 @@ func main() {
 	for {
 		connection, error := listener.Accept()
 		fmt.Println("Connection - " + connection.RemoteAddr().String())
-		chat.Channels[0].Connections = append(chat.Channels[0].Connections, connection)
 
 		if error != nil {
 			fmt.Println(error)
