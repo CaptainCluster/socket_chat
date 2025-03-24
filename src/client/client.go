@@ -13,7 +13,7 @@ import (
  *
  * Content
  * =======
- * clientInfo - Information about the client
+ * nickname   - The name the client uses in the chat
  * inputType  - What kind of input. Determines how server responds. Examples: msg, connection init data
  * message    - The content of the message (mostly relevant in chat)
  * isPrivate  - Private or public message (mostly relevant in chat)
@@ -24,6 +24,11 @@ type ClientInput struct {
 	Message   string
 	IsPrivate bool
 	Recipient string
+}
+
+type ServerResponse struct {
+	ResponseType string
+	Message      string
 }
 
 const (
@@ -42,6 +47,11 @@ func initializeClient() string {
 	return nickname
 }
 
+/**
+ * The data client sends to a server when a connection is initialized.
+ * This allows the server to connection various pieces of data to
+ * offer better service.
+ */
 func sendClientDataToServer(connection net.Conn, nickname string) {
 	clientInput := ClientInput{
 		Nickname:  nickname,
@@ -65,10 +75,22 @@ func initiateConnection() net.Conn {
 	return connection
 }
 
+/**
+ * A function for receiving inputs from the user. Uses bufio
+ * to include text that comes after a whitespace.
+ */
+func receiveUserInput() string {
+	input := bufio.NewReader(os.Stdin)
+	clientMessage, _ := input.ReadString('\n')
+	return clientMessage
+}
+
 func sendMessage(connection net.Conn, nickname string) {
-	var clientMessage string
 	fmt.Println("Message: ")
-	fmt.Scanln(&clientMessage)
+
+	clientMessage := receiveUserInput()
+
+	fmt.Println(clientMessage)
 
 	var isPrivate bool
 	recipient := ""
@@ -129,6 +151,9 @@ func sendMessageToServer(connection net.Conn, clientInput ClientInput) {
 /**
  * A function that prints a response received from the server.
  * Only takes the active connection as a parameter.
+ *
+ * This function executes in its own thread to ensure responses
+ * can be received constantly.
  */
 func handleServerResponse(connection net.Conn) {
 	for {
@@ -137,7 +162,38 @@ func handleServerResponse(connection net.Conn) {
 			fmt.Println(error)
 			os.Exit(1)
 		}
-		fmt.Println(string(response))
+
+		var serverResponse ServerResponse
+		error = json.Unmarshal([]byte(response), &serverResponse)
+		if error != nil {
+			fmt.Println("Deserialization error:", error)
+		}
+
+		fmt.Println("")
+
+		// A switch-case for handling various responses
+		switch serverResponse.ResponseType {
+		case "initialize-success":
+			fmt.Println("Connection with server initialized successfully!")
+			fmt.Println("Server: " + serverResponse.Message)
+		case "client-message":
+			fmt.Println(serverResponse.Message)
+		case "error":
+			fmt.Println("Server encountered an error.")
+			fmt.Println("Server: " + serverResponse.Message)
+		case "client-list-entry":
+			fmt.Println("Found client: " + serverResponse.Message)
+
+			var recipient string
+			fmt.Println("Which client do you want to send a message to?")
+			fmt.Scanln(&recipient)
+
+			// Sending the private message
+
+		default:
+			fmt.Println("Server: " + serverResponse.Message)
+		}
+
 	}
 }
 

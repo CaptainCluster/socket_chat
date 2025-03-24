@@ -23,3 +23,7 @@ Getting string to uppercase - [click here (geeksforgeeks.com)](https://www.geeks
 Making an empty array in Golang - [click here (stackoverflow.com)](https://stackoverflow.com/questions/45317074/best-practices-constructing-an-empty-array)
 
 Goroutine, aka Go's thread - [click here (go.dev)](https://go.dev/tour/concurrency/1)
+
+Converting int to string without value loss - [click here (golang.cafe)](https://golang.cafe/blog/golang-int-to-string-conversion-example.html)
+
+Receiving inputs, even with whitespcae - [click here (stackoverflow.com)](https://stackoverflow.com/questions/27414598/golang-accepting-input-with-spaces)

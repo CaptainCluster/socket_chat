@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -20,6 +21,12 @@ type ClientInput struct {
 	InputType string
 	Message   string
 	IsPrivate bool
+}
+
+// Server response structs
+type ServerResponse struct {
+	ResponseType string
+	Message      string
 }
 
 // Chat instance structs
@@ -78,20 +85,80 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 				Connection: connection,
 			}
 			chatInstance.Channels[0].Clients = append(chatInstance.Channels[0].Clients, client)
-			fmt.Fprintln(connection, "You have been added to channel ", chatInstance.Channels[0].ChannelId, ".")
+
+			serverResponse := ServerResponse{
+				ResponseType: "initialize-success",
+				Message:      "You have been added to channel " + strconv.Itoa(chatInstance.Channels[0].ChannelId) + ".",
+			}
+
+			jsonInput, error := json.Marshal(serverResponse)
+			if error != nil {
+				fmt.Println(error)
+				fmt.Fprintln(connection, "Server could not respond to your initialization request.")
+				return
+			}
+
+			fmt.Fprintln(connection, string(jsonInput)+"\n")
 
 		case "message":
-			// Sending a public message to everyone in the channel
-			if !clientInput.IsPrivate {
-				for _, i := range chatInstance.Channels[0].Clients {
-					fmt.Fprintln(i.Connection, string(clientInput.Nickname+": "+clientInput.Message)+"\n")
-				}
+
+			fmt.Println(clientInput.Message)
+
+			// In case the message is private, the case is exited for "security" reasons
+			if clientInput.IsPrivate {
+				fmt.Println("An error in 'message' case. The msg should not be private.")
 				continue
 			}
 
-			// A private message to a specified individual
 			for _, i := range chatInstance.Channels[0].Clients {
-				fmt.Fprintln(i.Connection, string(clientInput.Nickname+": "+clientInput.Message)+"\n")
+
+				// Client will not receive their own message
+				if i.Nickname == clientInput.Nickname {
+					continue
+				}
+
+				serverResponse := ServerResponse{
+					ResponseType: "client-message",
+					Message:      clientInput.Nickname + " > " + clientInput.Message,
+				}
+
+				jsonInput, error := json.Marshal(serverResponse)
+				if error != nil {
+					fmt.Println(error)
+					fmt.Fprintln(connection, "Server could not send a message")
+					return
+				}
+
+				fmt.Fprintln(i.Connection, string(jsonInput)+"\n")
+			}
+			continue
+
+		case "private-message":
+			split := strings.Split(clientInput.Message, "---//---")
+			recipient := split[0]
+			message := split[1]
+
+			for _, i := range chatInstance.Channels[0].Clients {
+
+				// Skipping those who are not the recipient
+				if i.Nickname != recipient {
+					continue
+				}
+
+				serverResponse := ServerResponse{
+					ResponseType: "client-message",
+					Message:      "[Private] " + clientInput.Nickname + " > " + message,
+				}
+
+				jsonInput, error := json.Marshal(serverResponse)
+				if error != nil {
+					fmt.Println(error)
+					fmt.Fprintln(connection, "Server could not send a message")
+					return
+				}
+
+				fmt.Fprintln(i.Connection, string(jsonInput)+"\n")
+				break
 			}
 
 		case "client-list":
@@ -101,18 +168,40 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 						continue
 					}
 
-					fmt.Fprintln(connection, "Here are the clients you can send a private message to:")
 					for _, selectClient := range channel.Clients {
 						if selectClient.Nickname == clientInput.Nickname {
 							continue
 						}
-						fmt.Fprintln(connection, selectClient.Nickname)
+
+						serverResponse := ServerResponse{
+							ResponseType: "client-list-entry",
+							Message:      selectClient.Nickname,
+						}
+						jsonInput, error := json.Marshal(serverResponse)
+						if error != nil {
+							fmt.Println(error)
+							fmt.Fprintln(connection, "Server could not send a message")
+							return
+						}
+
+						fmt.Fprintln(connection, string(jsonInput)+"\n")
 					}
 				}
 			}
 
 		default:
-			fmt.Fprintln(connection, "Request rejected due to unknown type. Try again.")
+			serverResponse := ServerResponse{
+				ResponseType: "error",
+				Message:      "Request rejected due to unknown type. Try again.",
+			}
+			jsonInput, error := json.Marshal(serverResponse)
+			if error != nil {
+				fmt.Println(error)
+				fmt.Fprintln(connection, "Server could not send a message")
+				return
+			}
+
+			fmt.Fprintln(connection, string(jsonInput)+"\n")
 		}
 	}
 }
