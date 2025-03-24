@@ -43,6 +43,16 @@ type ChatInstance struct {
 	Channels []Channel
 }
 
+func sendResponseToClient(connection net.Conn, serverResponse ServerResponse) {
+	jsonInput, error := json.Marshal(serverResponse)
+	if error != nil {
+		fmt.Println(error)
+		return
+	}
+	// Sending the input to the server
+	fmt.Fprint(connection, string(jsonInput)+"\n")
+}
+
 func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 	defer connection.Close()
 
@@ -90,14 +100,7 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 				Message:      "You have been added to channel " + strconv.Itoa(chatInstance.Channels[0].ChannelId) + ".",
 			}
 
-			jsonInput, error := json.Marshal(serverResponse)
-			if error != nil {
-				fmt.Println(error)
-				fmt.Fprintln(connection, "Server could not respond to your initialization request.")
-				return
-			}
-
-			fmt.Fprintln(connection, string(jsonInput)+"\n")
+			sendResponseToClient(connection, serverResponse)
 
 		case "message":
 
@@ -115,15 +118,16 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 					Message:      clientInput.Nickname + " > " + clientInput.Message,
 				}
 
-				jsonInput, error := json.Marshal(serverResponse)
-				if error != nil {
-					fmt.Println(error)
-					fmt.Fprintln(connection, "Server could not send a message")
-					return
-				}
-
-				fmt.Fprintln(i.Connection, string(jsonInput)+"\n")
+				sendResponseToClient(i.Connection, serverResponse)
+				break
 			}
+
+			serverResponseMainClient := ServerResponse{
+				ResponseType: "default",
+				Message:      "Message successfully sent",
+			}
+			sendResponseToClient(connection, serverResponseMainClient)
+
 			continue
 
 		case "private-message":
@@ -143,14 +147,7 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 					Message:      "[Private] " + clientInput.Nickname + " > " + message,
 				}
 
-				jsonInput, error := json.Marshal(serverResponse)
-				if error != nil {
-					fmt.Println(error)
-					fmt.Fprintln(connection, "Server could not send a message")
-					return
-				}
-
-				fmt.Fprintln(i.Connection, string(jsonInput)+"\n")
+				sendResponseToClient(i.Connection, serverResponse)
 				break
 			}
 
@@ -170,14 +167,7 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 							ResponseType: "client-list-entry",
 							Message:      selectClient.Nickname,
 						}
-						jsonInput, error := json.Marshal(serverResponse)
-						if error != nil {
-							fmt.Println(error)
-							fmt.Fprintln(connection, "Server could not send a message")
-							return
-						}
-
-						fmt.Fprintln(connection, string(jsonInput)+"\n")
+						sendResponseToClient(connection, serverResponse)
 					}
 				}
 			}
@@ -187,14 +177,7 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 				ResponseType: "error",
 				Message:      "Request rejected due to unknown type. Try again.",
 			}
-			jsonInput, error := json.Marshal(serverResponse)
-			if error != nil {
-				fmt.Println(error)
-				fmt.Fprintln(connection, "Server could not send a message")
-				return
-			}
-
-			fmt.Fprintln(connection, string(jsonInput)+"\n")
+			sendResponseToClient(connection, serverResponse)
 		}
 	}
 }

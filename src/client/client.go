@@ -40,6 +40,7 @@ const (
 func initializeClient() string {
 	var nickname string
 	fmt.Println("Enter your nickname: ")
+	fmt.Print("> ")
 	fmt.Scanf("%s", &nickname)
 	return nickname
 }
@@ -82,7 +83,7 @@ func receiveUserInput() string {
 
 func sendMessage(connection net.Conn, nickname string) {
 	fmt.Println("Message: ")
-
+	fmt.Print("> ")
 	clientMessage := receiveUserInput()
 
 	fmt.Println(clientMessage)
@@ -92,6 +93,7 @@ func sendMessage(connection net.Conn, nickname string) {
 	// Asking whether the message should be public or private
 	for {
 		fmt.Println("Will it be private? y = yes | n = no")
+		fmt.Print("> ")
 		fmt.Scanln(&userChoice)
 		switch userChoice {
 
@@ -122,7 +124,6 @@ func sendMessage(connection net.Conn, nickname string) {
 				InputType: "message",
 			}
 
-			// Converting input to JSON
 			sendMessageToServer(connection, clientInput)
 		default:
 			fmt.Println("Invalid input received. Try again!")
@@ -188,11 +189,12 @@ func handleServerResponse(connection net.Conn) {
 		default:
 			fmt.Println("Server: " + serverResponse.Message)
 		}
-
+		fmt.Print("> ")
 	}
 }
 
 func main() {
+	fmt.Println("Instructions: 1) Send message | 2) Select channel | 0) Disconnect")
 	nickname := initializeClient()
 	fmt.Println("Welcome", nickname+"!")
 
@@ -208,7 +210,7 @@ func main() {
 
 	for {
 		var userInput int
-		fmt.Println("1) Send message | 2) Select channel | 0) Disconnect: ")
+
 		fmt.Scanln(&userInput)
 
 		/**
