@@ -20,7 +20,6 @@ type ClientInput struct {
 	Nickname  string
 	InputType string
 	Message   string
-	IsPrivate bool
 }
 
 // Server response structs
@@ -103,12 +102,6 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 		case "message":
 
 			fmt.Println(clientInput.Message)
-
-			// In case the message is private, the case is exited for "security" reasons
-			if clientInput.IsPrivate {
-				fmt.Println("An error in 'message' case. The msg should not be private.")
-				continue
-			}
 
 			for _, i := range chatInstance.Channels[0].Clients {
 

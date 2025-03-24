@@ -16,14 +16,11 @@ import (
  * nickname   - The name the client uses in the chat
  * inputType  - What kind of input. Determines how server responds. Examples: msg, connection init data
  * message    - The content of the message (mostly relevant in chat)
- * isPrivate  - Private or public message (mostly relevant in chat)
  */
 type ClientInput struct {
 	Nickname  string
 	InputType string
 	Message   string
-	IsPrivate bool
-	Recipient string
 }
 
 type ServerResponse struct {
@@ -57,8 +54,6 @@ func sendClientDataToServer(connection net.Conn, nickname string) {
 		Nickname:  nickname,
 		InputType: "initialize",
 		Message:   "Connected to the server\n",
-		IsPrivate: false,
-		Recipient: "",
 	}
 	sendMessageToServer(connection, clientInput)
 }
@@ -92,8 +87,6 @@ func sendMessage(connection net.Conn, nickname string) {
 
 	fmt.Println(clientMessage)
 
-	var isPrivate bool
-	recipient := ""
 	var userChoice string
 
 	// Asking whether the message should be public or private
@@ -103,22 +96,34 @@ func sendMessage(connection net.Conn, nickname string) {
 		switch userChoice {
 
 		case "y":
-			isPrivate = true
-
 			clientsReq := ClientInput{
 				Nickname:  nickname,
 				Message:   clientMessage + "\n",
 				InputType: "client-list",
-				IsPrivate: isPrivate,
-				Recipient: "",
 			}
 			sendMessageToServer(connection, clientsReq)
 
+			recipient := ""
 			fmt.Println("Enter recipient name: ")
 			fmt.Scanf("%s", &recipient)
 
+			clientInput := ClientInput{
+				Nickname:  nickname,
+				Message:   recipient + "---//---" + clientMessage,
+				InputType: "private-message",
+			}
+
+			sendMessageToServer(connection, clientInput)
+
 		case "n":
-			isPrivate = false
+			clientInput := ClientInput{
+				Nickname:  nickname,
+				Message:   clientMessage + "\n",
+				InputType: "message",
+			}
+
+			// Converting input to JSON
+			sendMessageToServer(connection, clientInput)
 		default:
 			fmt.Println("Invalid input received. Try again!")
 			continue
@@ -126,16 +131,6 @@ func sendMessage(connection net.Conn, nickname string) {
 		break
 	}
 
-	clientInput := ClientInput{
-		Nickname:  nickname,
-		Message:   clientMessage + "\n",
-		InputType: "message",
-		IsPrivate: isPrivate,
-		Recipient: recipient,
-	}
-
-	// Converting input to JSON
-	sendMessageToServer(connection, clientInput)
 }
 
 func sendMessageToServer(connection net.Conn, clientInput ClientInput) {
