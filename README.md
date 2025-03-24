@@ -26,4 +26,6 @@ Goroutine, aka Go's thread - [click here (go.dev)](https://go.dev/tour/concurren
 
 Converting int to string without value loss - [click here (golang.cafe)](https://golang.cafe/blog/golang-int-to-string-conversion-example.html)
 
-Receiving inputs, even with whitespcae - [click here (stackoverflow.com)](https://stackoverflow.com/questions/27414598/golang-accepting-input-with-spaces)
+Receiving inputs, even with whitespace - [click here (stackoverflow.com)](https://stackoverflow.com/questions/27414598/golang-accepting-input-with-spaces)
+
+Random number library - [click here (golangdocs.com)](https://golangdocs.com/generate-random-numbers-in-golang)

@@ -172,19 +172,20 @@ func handleServerResponse(connection net.Conn) {
 		case "initialize-success":
 			fmt.Println("Connection with server initialized successfully!")
 			fmt.Println("Server: " + serverResponse.Message)
+
 		case "client-message":
 			fmt.Println(serverResponse.Message)
+
 		case "error":
 			fmt.Println("Server encountered an error.")
 			fmt.Println("Server: " + serverResponse.Message)
+
 		case "client-list-entry":
 			fmt.Println("Found client: " + serverResponse.Message)
 
 			var recipient string
 			fmt.Println("Which client do you want to send a message to?")
 			fmt.Scanln(&recipient)
-
-			// Sending the private message
 
 		default:
 			fmt.Println("Server: " + serverResponse.Message)

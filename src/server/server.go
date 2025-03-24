@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net"
 	"strconv"
 	"strings"
@@ -93,11 +94,13 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 				Nickname:   clientInput.Nickname,
 				Connection: connection,
 			}
-			chatInstance.Channels[0].Clients = append(chatInstance.Channels[0].Clients, client)
+
+			channelNum := rand.Intn(len(chatInstance.Channels)-1) + 1
+			chatInstance.Channels[channelNum].Clients = append(chatInstance.Channels[channelNum].Clients, client)
 
 			serverResponse := ServerResponse{
 				ResponseType: "initialize-success",
-				Message:      "You have been added to channel " + strconv.Itoa(chatInstance.Channels[0].ChannelId) + ".",
+				Message:      "You have been added to channel " + strconv.Itoa(channelNum) + ".",
 			}
 
 			sendResponseToClient(connection, serverResponse)
@@ -182,16 +185,26 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 	}
 }
 
+func createChannels() []Channel {
+	channels := []Channel{}
+
+	for i := 1; i < 11; i++ {
+		channel := Channel{
+			ChannelId: i,
+			Clients:   make([]Client, 0),
+		}
+		channels = append(channels, channel)
+	}
+	return channels
+}
+
 func main() {
-	var channelIdCounter int = 1
 	// Creating the chat instance before the server socket runs. It initially has
 	// only one channel, but more will be created to serve the client needs.
-	channel := Channel{
-		ChannelId: channelIdCounter,
-		Clients:   make([]Client, 0),
-	}
+	channels := createChannels()
+
 	chat := ChatInstance{
-		Channels: []Channel{channel},
+		Channels: channels,
 	}
 	fmt.Println("Channel with the id", chat.Channels[0].ChannelId, "has been created.")
 
