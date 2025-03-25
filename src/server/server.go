@@ -69,6 +69,18 @@ func findClientChannel(chatInstance ChatInstance, nickname string) (Channel, boo
 	return chatInstance.Channels[0], false
 }
 
+func checkNameAvailability(chatInstance ChatInstance, nickname string) bool {
+	for _, channel := range chatInstance.Channels {
+		for _, client := range channel.Clients {
+			if client.Nickname != nickname {
+				continue
+			}
+			return false
+		}
+	}
+	return true
+}
+
 func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.Mutex) {
 	defer connection.Close()
 
@@ -104,20 +116,22 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 		 */
 		switch clientInput.InputType {
 		case "initialize":
+			nameAvailable := checkNameAvailability(chatInstance, clientInput.Nickname)
+			if !nameAvailable {
+				serverResponse := ServerResponse{
+					ResponseType: "error",
+					Message:      "The name has been taken. Try reconnecting!",
+				}
+				sendResponseToClient(connection, serverResponse)
+				connection.Close()
+			}
+
 			client := Client{
 				Nickname:   clientInput.Nickname,
 				Connection: connection,
 			}
+
 			channelNum := rand.Intn(len(chatInstance.Channels))
-
-			if len(clientInput.Message) > 0 {
-				channelNum, error = strconv.Atoi(clientInput.Message)
-				if error != nil {
-					fmt.Println("Error when parsing int.")
-					return
-				}
-			}
-
 			chatInstance.Channels[channelNum].Clients = append(chatInstance.Channels[channelNum].Clients, client)
 
 			serverResponse := ServerResponse{
@@ -147,7 +161,7 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 
 				serverResponse := ServerResponse{
 					ResponseType: "client-message",
-					Message:      clientInput.Nickname + " > " + clientInput.Message,
+					Message:      "Message from " + clientInput.Nickname + ": " + clientInput.Message,
 				}
 
 				sendResponseToClient(client.Connection, serverResponse)
@@ -186,11 +200,9 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 
 				serverResponse := ServerResponse{
 					ResponseType: "client-message",
-					Message:      "[Private] " + clientInput.Nickname + " > " + message,
+					Message:      "[Private] Message from " + clientInput.Nickname + ": " + message,
 				}
 
-				// Sending the response to the recipient. Writing true to userExists to avoid error response
-				fmt.Println("sending")
 				sendResponseToClient(client.Connection, serverResponse)
 
 				serverResponse = ServerResponse{
@@ -254,7 +266,25 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 				return
 			}
 
+			if channel.ChannelId == message {
+				serverResponse := ServerResponse{
+					ResponseType: "error",
+					Message:      "You are already on that channel!",
+				}
+				sendResponseToClient(connection, serverResponse)
+				break
+			}
+
+			// A new client entry to store their data for the duration of the procedure
+			client := Client{
+				Nickname:   clientInput.Nickname,
+				Connection: connection,
+			}
+
 			mutex.Lock()
+			changeMade := false
+
+			// Removing the client from their old channel
 			for i := 0; i < len(channel.Clients); i++ {
 				if channel.Clients[i].Nickname != clientInput.Nickname {
 					continue
@@ -263,21 +293,75 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 					if chatInstance.Channels[j].ChannelId != message {
 						continue
 					}
-					// Leaving if the new channel would be the same
-					if i == j {
-						break
-					}
-					chatInstance.Channels[j].Clients = append(chatInstance.Channels[j].Clients, channel.Clients[i])
 					channel.Clients = slices.Delete(channel.Clients, i, i+1)
+					changeMade = true
+					break
+				}
+				if changeMade {
+					break
+				}
+			}
+
+			// Adding the client to their new channel
+			for i := 0; i < len(chatInstance.Channels); i++ {
+				if chatInstance.Channels[i].ChannelId == message {
+					chatInstance.Channels[i].Clients = append(chatInstance.Channels[i].Clients, client)
+				}
+			}
+
+			// Cleaning up cases where clients have empty strings as names
+			for i := 0; i < len(chatInstance.Channels); i++ {
+				for j := 0; j < len(chatInstance.Channels[i].Clients); j++ {
+					if len(chatInstance.Channels[i].Clients[j].Nickname) == 0 {
+						chatInstance.Channels[i].Clients = slices.Delete(chatInstance.Channels[i].Clients, j, j+1)
+					}
 				}
 			}
 			mutex.Unlock()
+
+			// This prints out the updated channel status on the server-side.
+			fmt.Println("===")
+			for _, channel := range chatInstance.Channels {
+				fmt.Println(channel.ChannelId)
+				for _, client := range channel.Clients {
+					fmt.Println(client.Nickname)
+				}
+			}
+			fmt.Println("===")
 
 			serverResponse := ServerResponse{
 				ResponseType: "channel-changed",
 				Message:      "Your channel is now " + clientInput.Message,
 			}
 			sendResponseToClient(connection, serverResponse)
+
+		case "disconnect":
+			channel, channelFound := findClientChannel(chatInstance, clientInput.Nickname)
+			if !channelFound {
+				fmt.Println("The user does not exist.")
+				return
+			}
+
+			// Informing people in the chat the client has disconnected
+			for _, client := range channel.Clients {
+				serverResponse := ServerResponse{
+					ResponseType: "",
+					Message:      clientInput.Nickname + " has disconnected.",
+				}
+				sendResponseToClient(client.Connection, serverResponse)
+			}
+
+			// Deleting the client from their channel, and effectively the chat
+
+			mutex.Lock()
+			for i := 0; i < len(channel.Clients); i++ {
+				if channel.Clients[i].Nickname != clientInput.Nickname {
+					continue
+				}
+				channel.Clients = slices.Delete(channel.Clients, i, i+1)
+			}
+			mutex.Unlock()
+			connection.Close()
 
 		default:
 			serverResponse := ServerResponse{
