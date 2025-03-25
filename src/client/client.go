@@ -41,7 +41,7 @@ const (
 func initializeClient() string {
 	var nickname string
 	fmt.Println("Enter your nickname: ")
-	fmt.Print("> ")
+	fmt.Print(" > ")
 	fmt.Scanf("%s", &nickname)
 	return nickname
 }
@@ -84,7 +84,7 @@ func receiveUserInput() string {
 
 func sendMessage(connection net.Conn, nickname string) {
 	fmt.Println("Message: ")
-	fmt.Print("> ")
+	fmt.Print(nickname + " > ")
 	clientMessage := receiveUserInput()
 
 	fmt.Println(clientMessage)
@@ -94,7 +94,7 @@ func sendMessage(connection net.Conn, nickname string) {
 	// Asking whether the message should be public or private
 	for {
 		fmt.Println("Will it be private? y = yes | n = no")
-		fmt.Print("> ")
+		fmt.Print("Input > ")
 		fmt.Scanln(&userChoice)
 		switch userChoice {
 
@@ -152,7 +152,7 @@ func sendMessageToServer(connection net.Conn, clientInput ClientInput) {
  * This function executes in its own thread to ensure responses
  * can be received constantly.
  */
-func handleServerResponse(connection net.Conn) {
+func handleServerResponse(connection net.Conn, nickname string) {
 	for {
 		response, error := bufio.NewReader(connection).ReadString('\n')
 		if error != nil {
@@ -187,14 +187,14 @@ func handleServerResponse(connection net.Conn) {
 		default:
 			fmt.Println("Server: " + serverResponse.Message)
 		}
-		fmt.Print("> ")
+		fmt.Print(nickname + " > ")
 	}
 }
 
 func changeChannel(connection net.Conn, nickname string) {
 	var channelNumber int
 	fmt.Println("Enter channel number.")
-	fmt.Print("> ")
+	fmt.Print(nickname + " > ")
 
 	fmt.Scanln(&channelNumber)
 
@@ -202,6 +202,15 @@ func changeChannel(connection net.Conn, nickname string) {
 		Nickname:  nickname,
 		Message:   strconv.Itoa(channelNumber),
 		InputType: "change-channel",
+	}
+	sendMessageToServer(connection, clientInput)
+}
+
+func disconnectFromServer(connection net.Conn, nickname string) {
+	clientInput := ClientInput{
+		Nickname:  nickname,
+		Message:   "",
+		InputType: "disconnect",
 	}
 	sendMessageToServer(connection, clientInput)
 }
@@ -218,7 +227,7 @@ func main() {
 	defer connection.Close()
 
 	// A thread for receiving server responses
-	go handleServerResponse(connection)
+	go handleServerResponse(connection, nickname)
 
 	// Sending client data to server
 	sendClientDataToServer(connection, nickname)
@@ -232,7 +241,7 @@ func main() {
 			 * Handling the user inputs
 			 * Case 1 - User sends a message (either public or private)
 		     * Case 2 - The user changes the channel
-		     * Case 0 - The user disconnects. They can reconnect or exit after this.
+		     * Case 0 - The user disconnects and the application exits with code 0
 		*/
 		switch userInput {
 		case 1:
@@ -242,21 +251,8 @@ func main() {
 			changeChannel(connection, nickname)
 
 		case 0:
-			var userInput string
-			connection.Close()
-			fmt.Println("The connection has been closed.")
-
-			fmt.Println("Would you like to end the program? n = no | anything else = yes")
-			fmt.Scanln(&userInput)
-
-			if userInput == "n" {
-				fmt.Println("Goodbye! Thank you for using the application!")
-				os.Exit(0)
-			}
-
-			// Since the program didn't exit, the connection will be re-initialized
-			connection = initiateConnection()
-			fmt.Println("The connection has been re-initialized.")
+			disconnectFromServer(connection, nickname)
+			os.Exit(0)
 
 		default:
 			fmt.Println("Invalid input. Try again.")
