@@ -55,7 +55,7 @@ func sendClientDataToServer(connection net.Conn, nickname string) {
 	clientInput := ClientInput{
 		Nickname:  nickname,
 		InputType: "initialize",
-		Message:   "Connected to the server\n",
+		Message:   "",
 	}
 	sendMessageToServer(connection, clientInput)
 }
@@ -112,7 +112,7 @@ func sendMessage(connection net.Conn, nickname string) {
 
 			clientInput := ClientInput{
 				Nickname:  nickname,
-				Message:   recipient + "---//---" + clientMessage,
+				Message:   recipient + "---//---" + clientMessage + "\n",
 				InputType: "private-message",
 			}
 
@@ -184,10 +184,6 @@ func handleServerResponse(connection net.Conn) {
 		case "client-list-entry":
 			fmt.Println("Found client: " + serverResponse.Message)
 
-			var recipient string
-			fmt.Println("Which client do you want to send a message to?")
-			fmt.Scanln(&recipient)
-
 		default:
 			fmt.Println("Server: " + serverResponse.Message)
 		}
@@ -211,7 +207,9 @@ func changeChannel(connection net.Conn, nickname string) {
 }
 
 func main() {
-	fmt.Println("Instructions: 1) Send message | 2) Select channel | 3) See channel info | 0) Disconnect")
+	fmt.Println("Welcome! You can chat in any of the following channels: 1, 2 or 3.")
+	fmt.Println("Instructions: 1) Send message | 2) Select channel | 0) Disconnect")
+
 	nickname := initializeClient()
 	fmt.Println("Welcome", nickname+"!")
 
@@ -247,7 +245,8 @@ func main() {
 			var userInput string
 			connection.Close()
 			fmt.Println("The connection has been closed.")
-			fmt.Println("Would you like to end the program? y = yes | n = no")
+
+			fmt.Println("Would you like to end the program? n = no | anything else = yes")
 			fmt.Scanln(&userInput)
 
 			if userInput == "n" {
