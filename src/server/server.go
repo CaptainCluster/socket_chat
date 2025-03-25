@@ -130,7 +130,6 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 				Message:      "Message successfully sent",
 			}
 			sendResponseToClient(connection, serverResponseMainClient)
-
 			continue
 
 		case "private-message":
@@ -160,12 +159,10 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 					if client.Nickname != clientInput.Nickname {
 						continue
 					}
-
 					for _, selectClient := range channel.Clients {
 						if selectClient.Nickname == clientInput.Nickname {
 							continue
 						}
-
 						serverResponse := ServerResponse{
 							ResponseType: "client-list-entry",
 							Message:      selectClient.Nickname,
@@ -174,6 +171,36 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 					}
 				}
 			}
+
+		case "change-channel":
+			channelIndex := 0
+			clientIndex := 0
+			for _, channel := range chatInstance.Channels {
+				for _, client := range channel.Clients {
+					if client.Nickname != clientInput.Nickname {
+						clientIndex++
+						continue
+					}
+					// Removing the client
+					channel.Clients = append(channel.Clients[:clientIndex], channel.Clients[clientIndex:]...)
+					break
+				}
+				channelIndex++
+				clientIndex = 0
+			}
+
+			message, error := strconv.Atoi(clientInput.Message)
+			if error != nil {
+				fmt.Println("Error when parsing int.")
+			}
+
+			chatInstance.Channels = append(chatInstance.Channels, chatInstance.Channels[message])
+
+			serverResponse := ServerResponse{
+				ResponseType: "channel-changed",
+				Message:      "Your channel is now " + clientInput.Message,
+			}
+			sendResponseToClient(connection, serverResponse)
 
 		default:
 			serverResponse := ServerResponse{
@@ -188,7 +215,7 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance) {
 func createChannels() []Channel {
 	channels := []Channel{}
 
-	for i := 1; i < 11; i++ {
+	for i := 1; i < 4; i++ {
 		channel := Channel{
 			ChannelId: i,
 			Clients:   make([]Client, 0),

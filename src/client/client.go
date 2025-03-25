@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 )
 
 /**
@@ -194,8 +195,23 @@ func handleServerResponse(connection net.Conn) {
 	}
 }
 
+func changeChannel(connection net.Conn, nickname string) {
+	var channelNumber int
+	fmt.Println("Enter channel number.")
+	fmt.Print("> ")
+
+	fmt.Scanln(&channelNumber)
+
+	clientInput := ClientInput{
+		Nickname:  nickname,
+		Message:   strconv.Itoa(channelNumber),
+		InputType: "change-channel",
+	}
+	sendMessageToServer(connection, clientInput)
+}
+
 func main() {
-	fmt.Println("Instructions: 1) Send message | 2) Select channel | 0) Disconnect")
+	fmt.Println("Instructions: 1) Send message | 2) Select channel | 3) See channel info | 0) Disconnect")
 	nickname := initializeClient()
 	fmt.Println("Welcome", nickname+"!")
 
@@ -225,7 +241,7 @@ func main() {
 			sendMessage(connection, nickname)
 
 		case 2:
-			fmt.Println("Select channel")
+			changeChannel(connection, nickname)
 
 		case 0:
 			var userInput string

@@ -29,3 +29,5 @@ Converting int to string without value loss - [click here (golang.cafe)](https:/
 Receiving inputs, even with whitespace - [click here (stackoverflow.com)](https://stackoverflow.com/questions/27414598/golang-accepting-input-with-spaces)
 
 Random number library - [click here (golangdocs.com)](https://golangdocs.com/generate-random-numbers-in-golang)
+
+Slicing to delete array elements - [click here (geeksforgeeks.com)](https://www.geeksforgeeks.org/delete-elements-in-a-slice-in-golang/)
