@@ -47,6 +47,10 @@ type ChatInstance struct {
 	Channels []Channel
 }
 
+/**
+ * Serializes the server response and sends it to the client via the active
+ * connection.
+ */
 func sendResponseToClient(connection net.Conn, serverResponse ServerResponse) {
 	jsonInput, error := json.Marshal(serverResponse)
 	if error != nil {
@@ -57,6 +61,11 @@ func sendResponseToClient(connection net.Conn, serverResponse ServerResponse) {
 	fmt.Fprint(connection, string(jsonInput)+"\n")
 }
 
+/**
+ * Finds the channel the client is on based on their nickname. Since
+ * each nickname is unique to one client, this is a working search
+ * mechanism.
+ */
 func findClientChannel(chatInstance ChatInstance, nickname string) (Channel, bool) {
 	for _, channel := range chatInstance.Channels {
 		for _, client := range channel.Clients {
@@ -69,6 +78,10 @@ func findClientChannel(chatInstance ChatInstance, nickname string) (Channel, boo
 	return chatInstance.Channels[0], false
 }
 
+/**
+ * Checks whether some client is using the name that a new client wants to
+ * use. Returns a boolean value based on the outcome.
+ */
 func checkNameAvailability(chatInstance ChatInstance, nickname string) bool {
 	for _, channel := range chatInstance.Channels {
 		for _, client := range channel.Clients {
@@ -104,7 +117,6 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 		// In case an error occurs, both client and server are notified
 		if error != nil {
 			fmt.Println("Deserialization error:", error)
-			fmt.Fprintln(connection, "Failed to handle your request.")
 			continue
 		}
 
@@ -161,11 +173,10 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 
 				serverResponse := ServerResponse{
 					ResponseType: "client-message",
-					Message:      "Message from " + clientInput.Nickname + ": " + clientInput.Message,
+					Message:      "\n=== Message ===\nMessage from " + clientInput.Nickname + ": " + clientInput.Message,
 				}
 
 				sendResponseToClient(client.Connection, serverResponse)
-				break
 			}
 
 			serverResponseMainClient := ServerResponse{
@@ -180,39 +191,33 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 			recipient := split[0]
 			message := split[1]
 
-			channel, channelFound := findClientChannel(chatInstance, clientInput.Nickname)
-
-			// Ensuring the sender is in a channel before the message is sent
-			if !channelFound {
-				fmt.Println("The user " + clientInput.Nickname + " tried to send a message to a channel, but was not a part of the channel.")
-				return
-			}
-
 			userExists := false
 
 			// Sending a message to each client in the channel
-			for _, client := range channel.Clients {
+			for _, channel := range chatInstance.Channels {
+				for _, client := range channel.Clients {
 
-				// Skipping those who are not the recipient
-				if client.Nickname != recipient {
-					continue
+					// Skipping those who are not the recipient
+					if client.Nickname != recipient {
+						continue
+					}
+
+					serverResponse := ServerResponse{
+						ResponseType: "client-message",
+						Message:      "\n=== Private Message ===\n[Private] Message from " + clientInput.Nickname + ": " + message,
+					}
+
+					sendResponseToClient(client.Connection, serverResponse)
+
+					serverResponse = ServerResponse{
+						ResponseType: "client-message",
+						Message:      "Message sent successfully",
+					}
+					sendResponseToClient(connection, serverResponse)
+
+					userExists = true
+					break
 				}
-
-				serverResponse := ServerResponse{
-					ResponseType: "client-message",
-					Message:      "[Private] Message from " + clientInput.Nickname + ": " + message,
-				}
-
-				sendResponseToClient(client.Connection, serverResponse)
-
-				serverResponse = ServerResponse{
-					ResponseType: "client-message",
-					Message:      "Message sent successfully",
-				}
-				sendResponseToClient(connection, serverResponse)
-
-				userExists = true
-				break
 			}
 
 			// If the user was not found, an error response is sent to the client
@@ -222,25 +227,6 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 					Message:      "User " + recipient + " not found.",
 				}
 				sendResponseToClient(connection, serverResponse)
-			}
-
-		case "client-list":
-			for _, channel := range chatInstance.Channels {
-				for _, client := range channel.Clients {
-					if client.Nickname != clientInput.Nickname {
-						continue
-					}
-					for _, selectClient := range channel.Clients {
-						if selectClient.Nickname == clientInput.Nickname {
-							continue
-						}
-						serverResponse := ServerResponse{
-							ResponseType: "client-list-entry",
-							Message:      selectClient.Nickname,
-						}
-						sendResponseToClient(connection, serverResponse)
-					}
-				}
 			}
 
 		case "change-channel":
@@ -320,14 +306,14 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 			mutex.Unlock()
 
 			// This prints out the updated channel status on the server-side.
-			fmt.Println("===")
+			fmt.Println("=== Channel Status ===")
 			for _, channel := range chatInstance.Channels {
-				fmt.Println(channel.ChannelId)
+				fmt.Println("Channel", channel.ChannelId)
 				for _, client := range channel.Clients {
 					fmt.Println(client.Nickname)
 				}
 			}
-			fmt.Println("===")
+			fmt.Println("======")
 
 			serverResponse := ServerResponse{
 				ResponseType: "channel-changed",
@@ -373,6 +359,10 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 	}
 }
 
+/**
+ * Used when starting the server. Creates a specific amount of channels
+ * based on the CHANNEL_AMOUNT const variable that serves as upper cap.
+ */
 func createChannels() []Channel {
 	channels := []Channel{}
 
@@ -408,7 +398,6 @@ func main() {
 		return
 	}
 	defer listener.Close()
-
 	for {
 		connection, error := listener.Accept()
 
@@ -424,4 +413,5 @@ func main() {
 		// client interaction
 		go handleMessage(connection, chat, &mutex)
 	}
+
 }
