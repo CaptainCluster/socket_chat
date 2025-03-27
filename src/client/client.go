@@ -60,6 +60,11 @@ func sendClientDataToServer(connection net.Conn, nickname string) {
 	sendMessageToServer(connection, clientInput)
 }
 
+/**
+ * Dials the server and checks for an error. If an error is encountered,
+ * the program exits with error status 1. If no errors are found, the
+ * connection is returned.
+ */
 func initiateConnection() net.Conn {
 	connection, error := net.Dial(SERVER_TYPE, SERVER_ADDRESS)
 
@@ -99,13 +104,6 @@ func sendMessage(connection net.Conn, nickname string) {
 		switch userChoice {
 
 		case "y":
-			clientsReq := ClientInput{
-				Nickname:  nickname,
-				Message:   clientMessage + "\n",
-				InputType: "client-list",
-			}
-			sendMessageToServer(connection, clientsReq)
-
 			recipient := ""
 			fmt.Println("Enter recipient name: ")
 			fmt.Scanf("%s", &recipient)
@@ -168,7 +166,7 @@ func handleServerResponse(connection net.Conn, nickname string) {
 
 		fmt.Println("")
 
-		// A switch-case for handling various responses
+		// A switch-case for handling various response types
 		switch serverResponse.ResponseType {
 		case "initialize-success":
 			fmt.Println("Connection with server initialized successfully!")
@@ -191,6 +189,10 @@ func handleServerResponse(connection net.Conn, nickname string) {
 	}
 }
 
+/**
+ * Allows the client to change their channel based on the channel
+ * number they type in.
+ */
 func changeChannel(connection net.Conn, nickname string) {
 	var channelNumber int
 	fmt.Println("Enter channel number.")
