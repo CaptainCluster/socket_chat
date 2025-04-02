@@ -1,3 +1,28 @@
+How to install go
+---
+
+Since this application uses Golang, rather than Python, you have to ensure you have Go installed as a dependency
+on your system.
+
+[Click here for more information](https://go.dev/doc/install)
+
+Running the application
+---
+
+The server must be run in order to have an X amount of clients interacting with it.
+
+1. Starting the server involves going to the server directory
+> cd server
+>
+> go run .
+
+2. Same goes for the client script
+> cd client
+>
+> go run .
+
+Ensure that _port 8000_ is free! If not, then you must alter const variables in both
+of the file (client.go & server.go).
 
 
 Sources
