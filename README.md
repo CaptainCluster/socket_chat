@@ -24,6 +24,19 @@ The server must be run in order to have an X amount of clients interacting with 
 Ensure that _port 8000_ is free! If not, then you must alter const variables in both
 of the file (client.go & server.go).
 
+Features
+---
+
+Here are some of the features this application has
+
+1. Randomized channel for each client
+2. Clients can change channels
+3. Public messages (seen by everyone in the same channel)
+4. Private messages (recipient can be in any channel)
+5. The "go" command for creating a thread for each client
+6. Mutex lock to avoid resource conflicts
+7. Client nicknames are unique, checked by server
+8. Disconnected users removed as entries from chat instance
 
 Sources
 ---
