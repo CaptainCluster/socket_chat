@@ -1,8 +1,8 @@
 How to install go
 ---
 
-Since this application uses Golang, rather than Python, you have to ensure you have Go installed as a dependency
-on your system.
+Since this application uses Golang, rather than Python that seems to be the popular choice for this course, you have 
+to ensure you have Go installed as a dependency on your system.
 
 [Click here for more information](https://go.dev/doc/install)
 
