@@ -101,13 +101,16 @@ func sendMessage(connection net.Conn, nickname string) {
 		fmt.Println("Will it be private? y = yes | n = no")
 		fmt.Print("Input > ")
 		fmt.Scanln(&userChoice)
-		switch userChoice {
 
+		// A switch for handling scenarios based on whether the user wants the
+		// message to be private
+		switch userChoice {
 		case "y":
 			recipient := ""
 			fmt.Println("Enter recipient name: ")
 			fmt.Scanf("%s", &recipient)
 
+			// The "---//---" symbol separates the recipient and the message
 			clientInput := ClientInput{
 				Nickname:  nickname,
 				Message:   recipient + "---//---" + clientMessage + "\n",
@@ -133,6 +136,10 @@ func sendMessage(connection net.Conn, nickname string) {
 
 }
 
+/**
+ * Serializes the client input, checks for serialization errors and
+ * sends the message to the server.
+ */
 func sendMessageToServer(connection net.Conn, clientInput ClientInput) {
 	jsonInput, error := json.Marshal(clientInput)
 	if error != nil {

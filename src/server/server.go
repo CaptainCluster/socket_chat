@@ -123,8 +123,12 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 		/**
 		 * Cases
 		 * =====
-		 * initialize - Puts the client on a channel
-		 * message    - Sends a message to the channel
+		 * initialize 		- Puts the client on a channel
+		 * message    		- Sends a message to the channel
+		 * private-message 	- Sends a private message to the recipient (no matter the channel)
+		 * change-channel	- Puts the client into the desired channel
+		 * disconnect       - Closes the connection with a client. Removes them from the chat instance.
+		 * default case     - An error message is sent to the client
 		 */
 		switch clientInput.InputType {
 		case "initialize":
@@ -338,7 +342,6 @@ func handleMessage(connection net.Conn, chatInstance ChatInstance, mutex *sync.M
 			}
 
 			// Deleting the client from their channel, and effectively the chat
-
 			mutex.Lock()
 			for i := 0; i < len(channel.Clients); i++ {
 				if channel.Clients[i].Nickname != clientInput.Nickname {
@@ -377,7 +380,7 @@ func createChannels() []Channel {
 }
 
 func main() {
-	var mutex sync.Mutex
+	var mutex sync.Mutex // This will be passed to client threads to lock resources
 
 	// Creating the chat instance before the server socket runs. It initially has
 	// only one channel, but more will be created to serve the client needs.
@@ -386,7 +389,7 @@ func main() {
 	chat := ChatInstance{
 		Channels: channels,
 	}
-	fmt.Println("A chat instance with " + strconv.Itoa(len(channels)) + " has been created.")
+	fmt.Println("A chat instance with " + strconv.Itoa(len(channels)) + " channels has been created.")
 
 	// Building the address string and listening through the socket
 	listener, error := net.Listen(SERVER_TYPE, SERVER_ADDRESS)
