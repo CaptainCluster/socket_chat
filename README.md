@@ -1,4 +1,4 @@
-How to install go
+How to install Go
 ---
 
 Since this application uses Golang, rather than Python that seems to be the popular choice for this course, you have 
